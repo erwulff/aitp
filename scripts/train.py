@@ -9,7 +9,7 @@ from torch import nn
 from torch import optim
 from torch.optim.lr_scheduler import OneCycleLR
 
-from learning.models import GraphNet, get_model
+from learning.models import get_model
 from learning.train_utils import fit, get_data, CheckpointSaver
 from learning.utils import count_trainable_parameters, plot_losses, create_train_dir
 from learning.datasets import JEDIDataset, TinyJEDIDataset, JEDIRAMDataset
