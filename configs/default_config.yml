@@ -1,0 +1,11 @@
+# Training parameters
+epochs: 2
+bs: 64
+lr: 0.01
+wd: 0.001
+# loss_function: "crossentropyloss"
+# optimizer: "AdamW"
+# schedule: "onecycle"
+# Other
+device: "cpu"
+dataloader_num_workers: 0  # set to 0 since this parameter doesn't work on my MacBook
