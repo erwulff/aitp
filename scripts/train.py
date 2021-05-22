@@ -20,7 +20,7 @@ mpl.rc_file("scripts/my_matplotlib_rcparams")
 def main(args):
 
     with open(args.config, "r") as ymlfile:
-        cfg = yaml.load(ymlfile)
+        cfg = yaml.load(ymlfile, Loader=yaml.FullLoader)
 
     # Model
     jedinet = get_model()
