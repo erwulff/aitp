@@ -160,7 +160,7 @@ class GraphNet(nn.Module):
         return torch.mm(x.view(-1, x_shape[2]), y).view(-1, x_shape[1], y_shape[1])
 
 
-def get_model(sumO):
+def get_model(sumO, device):
 
     nParticles = 150
     labels = ["j_g", "j_q", "j_w", "j_z", "j_t"]
@@ -210,5 +210,7 @@ def get_model(sumO):
         fc_activation=args.get("fc_act", 0),
         optimizer=0,  # disabled
         verbose=True,
+        device=device,
+        sumO=sumO,
     )
     return mymodel

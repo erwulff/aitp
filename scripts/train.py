@@ -25,7 +25,7 @@ def main(args):
     device = cfg["device"]
 
     # Model
-    jedinet = get_model(sumO=cfg["sumO"])
+    jedinet = get_model(sumO=cfg["sumO"], device=device)
     jedinet = jedinet.to(device)
     print("Trainable parameters: {}".format(count_trainable_parameters(jedinet)))
 
