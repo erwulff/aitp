@@ -27,7 +27,7 @@ def loss_batch(model, loss_func, xb, yb, opt=None):
     return loss.item(), len(xb)
 
 
-def fit(epochs, model, loss_func, opt, train_dl, val_dl, lr_scheduler=None, device="gpu", checkpoint_saver=None):
+def fit(epochs, model, loss_func, opt, train_dl, val_dl, lr_scheduler=None, device="cuda", checkpoint_saver=None):
     since = time.time()
     epochs_train_loss = []
     epochs_val_loss = []

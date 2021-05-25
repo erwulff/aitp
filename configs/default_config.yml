@@ -1,11 +1,18 @@
+# Model parameters
+sumO: True
 # Training parameters
-epochs: 2
+epochs: 250
 bs: 64
-lr: 0.01
+lr: 0.001
 wd: 0.001
 # loss_function: "crossentropyloss"
 # optimizer: "AdamW"
 # schedule: "onecycle"
+# Dataset
+data_dir: "../data/hls4ml_LHCjet_150p/hls4ml_LHCjet_150p_JEDI"
+dataset_class: "JEDIDataset"
+train_size: 630000
+val_size: 260000
 # Other
-device: "cpu"
-dataloader_num_workers: 0  # set to 0 since this parameter doesn't work on my MacBook
+device: "cuda"
+dataloader_num_workers: 2

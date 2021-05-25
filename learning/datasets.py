@@ -13,14 +13,25 @@ class JEDIRAMDataset(Dataset):
     doesn't have a lot of memory.
     """
 
-    JET_IMAGE_SIZE = 90000
     FILE_SIZE = 10000
 
-    def __init__(self, data_dir, train=True):
+    def __init__(self, data_dir, train=True, size=None):
+        self.size = size
+
         if train:
             split_dir = Path(data_dir) / "train"
+            max_size = len(list(split_dir.glob("*JEDI*"))) * self.FILE_SIZE
+            if self.size == None:
+                self.size = 630000
+            else:
+                assert self.size <= max_size
         else:
             split_dir = Path(data_dir) / "val"
+            max_size = len(list(split_dir.glob("*JEDI*"))) * self.FILE_SIZE
+            if self.size == None:
+                self.size = 260000
+            else:
+                assert self.size <= max_size
 
         data_list = []
         label_list = []
@@ -36,7 +47,7 @@ class JEDIRAMDataset(Dataset):
         return self.X[index, ::], self.Y[index, ::]
 
     def __len__(self):
-        return len(self.X)
+        return self.size  # len(self.X)
 
 
 class JEDIDataset(Dataset):
@@ -50,12 +61,24 @@ class JEDIDataset(Dataset):
     JET_IMAGE_SIZE = 90000
     FILE_SIZE = 10000
 
-    def __init__(self, data_dir, train=True):
+    def __init__(self, data_dir, train=True, size=None):
         self.train = train
+        self.size = size
+
         if self.train:
             self.split_dir = Path(data_dir) / "train"
+            max_size = len(list(self.split_dir.glob("*JEDI*"))) * self.FILE_SIZE
+            if self.size == None:
+                self.size = 630000
+            else:
+                assert self.size <= max_size
         else:
             self.split_dir = Path(data_dir) / "val"
+            max_size = len(list(self.split_dir.glob("*JEDI*"))) * self.FILE_SIZE
+            if self.size == None:
+                self.size = 260000
+            else:
+                assert self.size <= max_size
 
     def __getitem__(self, index):
         if not self.train:
@@ -79,7 +102,7 @@ class JEDIDataset(Dataset):
         return np.array(file["X"][i_file]), np.array(file["Y"][i_file])
 
     def __len__(self):
-        return len(list(self.split_dir.glob("*JEDI*"))) * self.FILE_SIZE
+        return self.size
 
 
 class TinyJEDIDataset(Dataset):
@@ -89,7 +112,7 @@ class TinyJEDIDataset(Dataset):
 
     FILE_SIZE = 10000
 
-    def __init__(self, data_dir, size=None, train=True):
+    def __init__(self, data_dir, train=True, size=None):
         if size is not None:
             assert size <= self.FILE_SIZE, "maximum size of TinyJEDIDataset is {}".format(self.FILE_SIZE)
             self.size = size

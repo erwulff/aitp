@@ -5,10 +5,6 @@ import itertools
 from torch.autograd.variable import Variable
 
 
-args_cuda = False
-args_sumO = True
-
-
 class GraphNet(nn.Module):
     """
     Model definition taken from https://github.com/vlimant/NNLO/blob/master/examples/example_jedi_torch.py
@@ -27,8 +23,11 @@ class GraphNet(nn.Module):
         fc_activation=0,
         optimizer=0,
         verbose=False,
+        device="cpu",
+        sumO=True,
     ):
         super(GraphNet, self).__init__()
+        self.device = device
         self.hidden = hidden
         self.P = len(params)
         self.N = n_constituents
@@ -45,9 +44,9 @@ class GraphNet(nn.Module):
         self.verbose = verbose
         self.assign_matrices()
 
-        self.sum_O = args_sumO
+        self.sum_O = sumO
         self.Ra = torch.ones(self.Dr, self.Nr)
-        if args_cuda:
+        if self.device == "cuda":
             self.fr1 = nn.Linear(2 * self.P + self.Dr, hidden).cuda()
             self.fr2 = nn.Linear(hidden, int(hidden / 2)).cuda()
             self.fr3 = nn.Linear(int(hidden / 2), self.De).cuda()
@@ -82,7 +81,7 @@ class GraphNet(nn.Module):
         for i, (r, s) in enumerate(receiver_sender_list):
             self.Rr[r, i] = 1
             self.Rs[s, i] = 1
-        if args_cuda:
+        if self.device == "cuda":
             self.Rr = Variable(self.Rr).cuda()
             self.Rs = Variable(self.Rs).cuda()
         else:
@@ -161,7 +160,7 @@ class GraphNet(nn.Module):
         return torch.mm(x.view(-1, x_shape[2]), y).view(-1, x_shape[1], y_shape[1])
 
 
-def get_model(**args):
+def get_model(sumO):
 
     nParticles = 150
     labels = ["j_g", "j_q", "j_w", "j_z", "j_t"]
@@ -185,8 +184,9 @@ def get_model(**args):
     ]
 
     load = True
+    args = {}
     if load:
-        if args_sumO:
+        if sumO:
             x = [50, 14, 10, 2, 2, 2, 0]
         else:
             x = [10, 4, 14, 2, 2, 2, 0]
