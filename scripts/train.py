@@ -7,7 +7,7 @@ import torch
 from torch import nn
 
 from torch import optim
-from torch.optim.lr_scheduler import OneCycleLR
+from torch.optim.lr_scheduler import OneCycleLR, CosineAnnealingLR
 
 from learning.models import get_model
 from learning.train_utils import fit, get_data, CheckpointSaver
@@ -47,7 +47,15 @@ def main(args):
 
     opt = optim.AdamW(jedinet.parameters(), lr=lr, weight_decay=wd)
     train_dl, val_dl = get_data(train_dataset, val_dataset, bs, dl_num_workers)
-    onecycle_scheduler = OneCycleLR(opt, max_lr=lr, steps_per_epoch=len(train_dl), epochs=epochs)
+
+    if cfg["lr_schedule"] == "constant":
+        lr_scheduler = None
+    elif cfg["lr_schedule"] == "onecycle":
+        lr_scheduler = OneCycleLR(opt, max_lr=lr, steps_per_epoch=len(train_dl), epochs=epochs)
+    elif cfg["lr_schedule"] == "cosinedecay":
+        lr_scheduler = CosineAnnealingLR(opt, T_max=len(train_dl) * epochs)
+    else:
+        raise ValueError("Supported values for lr_schedule are 'constant', 'onecycle' and 'cosinedecay'.")
 
     train_dir = create_train_dir()
     checkpoint_dir = train_dir / Path("checkpoints")
@@ -56,11 +64,11 @@ def main(args):
         save_dir=str(checkpoint_dir),
         model=jedinet,
         optimizer=opt,
-        lr_scheduler=onecycle_scheduler,
+        lr_scheduler=lr_scheduler,
     )
 
     # Train
-    train_stats = fit(epochs, jedinet, loss_func, opt, train_dl, val_dl, onecycle_scheduler, device, checkpoint_saver)
+    train_stats = fit(epochs, jedinet, loss_func, opt, train_dl, val_dl, lr_scheduler, device, checkpoint_saver)
 
     # Analysis
     print(train_stats)

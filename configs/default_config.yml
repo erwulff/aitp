@@ -7,7 +7,7 @@ lr: 0.001
 wd: 0.001
 # loss_function: "crossentropyloss"
 # optimizer: "AdamW"
-# schedule: "onecycle"
+lr_schedule: "constant"  # onecycle, cosinedecay, constant
 # Dataset
 data_dir: "../data/hls4ml_LHCjet_150p/hls4ml_LHCjet_150p_JEDI"
 dataset_class: "JEDIDataset"
