@@ -9,7 +9,7 @@ from torch import nn
 from torch import optim
 from torch.optim.lr_scheduler import OneCycleLR, CosineAnnealingLR
 
-from learning.models import get_model
+from learning.models import get_model, get_model_old
 from learning.train_utils import fit, get_data, CheckpointSaver
 from learning.utils import count_trainable_parameters, plot_losses, create_train_dir
 from learning.datasets import JEDIDataset, TinyJEDIDataset, JEDIRAMDataset
@@ -25,7 +25,7 @@ def main(args):
     device = cfg["device"]
 
     # Model
-    jedinet = get_model(sumO=cfg["sumO"], device=device)
+    jedinet = get_model_old(sumO=cfg["sumO"], device=device)  # get_model(sumO=cfg["sumO"], device=device)
     jedinet = jedinet.to(device)
     print("Trainable parameters: {}".format(count_trainable_parameters(jedinet)))
 
