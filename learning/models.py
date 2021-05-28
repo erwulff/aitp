@@ -281,8 +281,8 @@ class GraphNetOld(nn.Module):
         self.Rs = self.Rs.cuda()
 
     def forward(self, x):
-        Orr = self.tmul(x, self.Rr)
-        Ors = self.tmul(x, self.Rs)
+        Orr = self.tmul(x.float(), self.Rr)
+        Ors = self.tmul(x.float(), self.Rs)
         B = torch.cat([Orr, Ors], 1)
         ### First MLP ###
         B = torch.transpose(B, 1, 2).contiguous()
@@ -302,7 +302,7 @@ class GraphNetOld(nn.Module):
         E = torch.transpose(E, 1, 2).contiguous()
         Ebar = self.tmul(E, torch.transpose(self.Rr, 0, 1).contiguous())
         del E
-        C = torch.cat([x, Ebar], 1)
+        C = torch.cat([x.float(), Ebar], 1)
         del Ebar
         C = torch.transpose(C, 1, 2).contiguous()
         ### Second MLP ###
