@@ -257,18 +257,34 @@ class GraphNetOld(nn.Module):
 
         self.sum_O = sum_O
         self.Ra = torch.ones(self.Dr, self.Nr)
-        self.fr1 = nn.Linear(2 * self.P + self.Dr, self.hidden).cuda()
-        self.fr2 = nn.Linear(self.hidden, int(self.hidden / 2)).cuda()
-        self.fr3 = nn.Linear(int(self.hidden / 2), self.De).cuda()
-        self.fo1 = nn.Linear(self.P + self.Dx + self.De, self.hidden).cuda()
-        self.fo2 = nn.Linear(self.hidden, int(self.hidden / 2)).cuda()
-        self.fo3 = nn.Linear(int(self.hidden / 2), self.Do).cuda()
-        if self.sum_O:
-            self.fc1 = nn.Linear(self.Do * 1, self.hidden).cuda()
+        if self.device == "cpu":
+            self.fr1 = nn.Linear(2 * self.P + self.Dr, self.hidden)
+            self.fr2 = nn.Linear(self.hidden, int(self.hidden / 2))
+            self.fr3 = nn.Linear(int(self.hidden / 2), self.De)
+            self.fo1 = nn.Linear(self.P + self.Dx + self.De, self.hidden)
+            self.fo2 = nn.Linear(self.hidden, int(self.hidden / 2))
+            self.fo3 = nn.Linear(int(self.hidden / 2), self.Do)
+            if self.sum_O:
+                self.fc1 = nn.Linear(self.Do * 1, self.hidden)
+            else:
+                self.fc1 = nn.Linear(self.Do * self.N, self.hidden)
+            self.fc2 = nn.Linear(self.hidden, int(self.hidden / 2))
+            self.fc3 = nn.Linear(int(self.hidden / 2), self.n_targets)
+        elif self.device == "cuda":
+            self.fr1 = nn.Linear(2 * self.P + self.Dr, self.hidden).cuda()
+            self.fr2 = nn.Linear(self.hidden, int(self.hidden / 2)).cuda()
+            self.fr3 = nn.Linear(int(self.hidden / 2), self.De).cuda()
+            self.fo1 = nn.Linear(self.P + self.Dx + self.De, self.hidden).cuda()
+            self.fo2 = nn.Linear(self.hidden, int(self.hidden / 2)).cuda()
+            self.fo3 = nn.Linear(int(self.hidden / 2), self.Do).cuda()
+            if self.sum_O:
+                self.fc1 = nn.Linear(self.Do * 1, self.hidden).cuda()
+            else:
+                self.fc1 = nn.Linear(self.Do * self.N, self.hidden).cuda()
+            self.fc2 = nn.Linear(self.hidden, int(self.hidden / 2)).cuda()
+            self.fc3 = nn.Linear(int(self.hidden / 2), self.n_targets).cuda()
         else:
-            self.fc1 = nn.Linear(self.Do * self.N, self.hidden).cuda()
-        self.fc2 = nn.Linear(self.hidden, int(self.hidden / 2)).cuda()
-        self.fc3 = nn.Linear(int(self.hidden / 2), self.n_targets).cuda()
+            raise ValueError("device has to be either 'cuda' or 'cpu'!")
 
     def assign_matrices(self):
         self.Rr = torch.zeros(self.N, self.Nr)
@@ -277,8 +293,12 @@ class GraphNetOld(nn.Module):
         for i, (r, s) in enumerate(receiver_sender_list):
             self.Rr[r, i] = 1
             self.Rs[s, i] = 1
-        self.Rr = self.Rr.cuda()
-        self.Rs = self.Rs.cuda()
+        if self.device == "cpu":
+            self.Rr = self.Rr
+            self.Rs = self.Rs
+        elif self.device == "cuda":
+            self.Rr = self.Rr.cuda()
+            self.Rs = self.Rs.cuda()
 
     def forward(self, x):
         Orr = self.tmul(x.float(), self.Rr)
@@ -406,3 +426,9 @@ def get_model_old(sumO, device):
         sum_O=sumO,
     )
     return mymodel
+
+def get_model_from_config(config):
+    if config["model_name"] == "GraphNetOld":
+        return get_model_old(config["sumO"], config["device"])
+    elif config["model_name"] == "GraphNet":
+        return get_model(config["sumO"], config["device"])

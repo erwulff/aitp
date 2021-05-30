@@ -1,4 +1,5 @@
 # Model parameters
+model_name: GraphNetOld  # GraphNet, GraphNetOld
 sumO: True
 # Training parameters
 epochs: 250

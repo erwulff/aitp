@@ -1,7 +1,7 @@
 from pathlib import Path
 import argparse
-import yaml
 import matplotlib as mpl
+import shutil
 
 import torch
 from torch import nn
@@ -9,23 +9,24 @@ from torch import nn
 from torch import optim
 from torch.optim.lr_scheduler import OneCycleLR, CosineAnnealingLR
 
-from learning.models import get_model, get_model_old
+from learning.models import get_model_from_config
 from learning.train_utils import fit, get_data, CheckpointSaver
-from learning.utils import count_trainable_parameters, plot_losses, create_train_dir
+from learning.utils import count_trainable_parameters, plot_losses, create_train_dir, open_config
 from learning.datasets import JEDIDataset, TinyJEDIDataset, JEDIRAMDataset
 from learning import datasets
+
+from scripts.evaluate import evaluate
 
 mpl.rc_file("scripts/my_matplotlib_rcparams")
 
 
 def main(args):
 
-    with open(args.config, "r") as ymlfile:
-        cfg = yaml.load(ymlfile, Loader=yaml.FullLoader)
+    cfg = open_config(args.config)
     device = cfg["device"]
 
     # Model
-    jedinet = get_model_old(sumO=cfg["sumO"], device=device)  # get_model(sumO=cfg["sumO"], device=device)
+    jedinet = get_model_from_config(cfg)  # get_model(sumO=cfg["sumO"], device=device)
     jedinet = jedinet.to(device)
     print("Trainable parameters: {}".format(count_trainable_parameters(jedinet)))
 
@@ -58,6 +59,7 @@ def main(args):
         raise ValueError("Supported values for lr_schedule are 'constant', 'onecycle' and 'cosinedecay'.")
 
     train_dir = create_train_dir()
+    shutil.copyfile(args.config, str(Path(train_dir) / Path(args.config).name))
     checkpoint_dir = train_dir / Path("checkpoints")
     checkpoint_dir.mkdir()
     checkpoint_saver = CheckpointSaver(
@@ -70,10 +72,11 @@ def main(args):
     # Train
     train_stats = fit(epochs, jedinet, loss_func, opt, train_dl, val_dl, lr_scheduler, device, checkpoint_saver)
 
-    # Analysis
+    # Evaluation
     print(train_stats)
     evaluation_dir = train_dir / "evaluation"
     evaluation_dir.mkdir()
+    evaluate(jedinet, args.config, evaluation_dir)
     plot_losses(train_stats, show=False, save_path=evaluation_dir / "loss_curves.jpg")
 
 
