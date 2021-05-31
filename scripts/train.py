@@ -58,7 +58,7 @@ def main(args):
     else:
         raise ValueError("Supported values for lr_schedule are 'constant', 'onecycle' and 'cosinedecay'.")
 
-    train_dir = create_train_dir()
+    train_dir = create_train_dir(args.prefix)
     shutil.copyfile(args.config, str(Path(train_dir) / Path(args.config).name))
     checkpoint_dir = train_dir / Path("checkpoints")
     checkpoint_dir.mkdir()
@@ -83,6 +83,7 @@ def main(args):
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", "-c", default=None, required=True, type=str)
+    parser.add_argument("--prefix", "-p", default=None, required=False, type=str)
     return parser.parse_args()
 
 

@@ -27,8 +27,11 @@ def count_trainable_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 
-def create_train_dir():
-    train_dir = Path("training_sessions") / Path(datetime.datetime.now().strftime("%Y%m%d_%H%M%S"))
+def create_train_dir(prefix):
+    if prefix is None:
+        train_dir = Path("training_sessions") / datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    else:
+        train_dir = Path("training_sessions") / (prefix + datetime.datetime.now().strftime("%Y%m%d_%H%M%S"))
     train_dir.mkdir(parents=True)
     return train_dir
 
