@@ -101,7 +101,7 @@ def evaluate(model, config, eval_dir):
     loss_func = nn.CrossEntropyLoss(weight=torch.Tensor([1, 1, 1, 1, 1]).to(device))
     val_dl = DataLoader(val_dataset, batch_size=bs * 2, num_workers=dl_num_workers, pin_memory=True)
 
-    val_bar = tqdm(val_dl, total=len(val_dl), desc="Validation")
+    val_bar = tqdm(val_dl, total=len(val_dl), desc="Evaluating")
     with torch.no_grad():
         losses = []
         nums = []
@@ -123,8 +123,8 @@ def evaluate(model, config, eval_dir):
             # predictions_writer.writerows(predb.numpy())
             # label_writer.writerows(labelb.numpy())
             sep = "\n"
-            predictions_file.write(np.array2string(predb.numpy(), separator=sep)[1:-1].replace(" ", "") + sep)
-            label_file.write(np.array2string(labelb.numpy(), separator=sep)[1:-1].replace(" ", "") + sep)
+            predictions_file.write(np.array2string(predb.cpu().numpy(), separator=sep)[1:-1].replace(" ", "") + sep)
+            label_file.write(np.array2string(labelb.cpu().numpy(), separator=sep)[1:-1].replace(" ", "") + sep)
 
         predictions_file.close()
         label_file.close()
