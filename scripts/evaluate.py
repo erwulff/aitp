@@ -7,6 +7,7 @@ import numpy as np
 from pathlib import Path
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import csv
 
 from sklearn.metrics import roc_curve, auc
 from sklearn.preprocessing import label_binarize
@@ -17,26 +18,23 @@ from learning import datasets
 
 
 def read_eval_files(eval_dir):
-    labels = np.genfromtxt(str(Path(eval_dir) / "labels.txt"), delimiter='\n')
-    preds = np.genfromtxt(str(Path(eval_dir) / "predictions.txt"), delimiter='\n')
-    return preds, labels
+    labels = np.genfromtxt(str(Path(eval_dir) / "labels.csv"), delimiter=' ')
+    logits = np.genfromtxt(str(Path(eval_dir) / "predictions.csv"), delimiter=' ')
+    return logits, labels
 
 def compute_roc_stats(eval_dir):
-    preds, labels = read_eval_files(eval_dir)
-
-    labels = label_binarize(labels, classes=list(range(0, 5)))
-    preds = label_binarize(preds, classes=list(range(0, 5)))
+    logits, labels = read_eval_files(eval_dir)
 
     n_classes = labels.shape[1]
     fpr = {}
     tpr = {}
     roc_auc = {}
     for ii in range(n_classes):
-        fpr[ii], tpr[ii], _ = roc_curve(labels[:, ii], preds[:, ii])
+        fpr[ii], tpr[ii], _ = roc_curve(labels[:, ii], logits[:, ii])
         roc_auc[ii] = auc(fpr[ii], tpr[ii])
 
     # Compute micro-average ROC curve and ROC area
-    fpr["micro"], tpr["micro"], _ = roc_curve(labels.ravel(), preds.ravel())
+    fpr["micro"], tpr["micro"], _ = roc_curve(labels.ravel(), logits.ravel())
     roc_auc["micro"] = auc(fpr["micro"], tpr["micro"])
 
     # Compute macro-average ROC curve and ROC area
@@ -105,26 +103,24 @@ def evaluate(model, config, eval_dir):
     with torch.no_grad():
         losses = []
         nums = []
-        predictions_file = open(str(Path(eval_dir) / "predictions.txt"), 'w', newline='')
-        # predictions_writer = csv.writer(predictions_file, delimiter=' ', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+        predictions_file = open(str(Path(eval_dir) / "predictions.csv"), 'w', newline='')
+        predictions_writer = csv.writer(predictions_file, delimiter=' ', quotechar='|', quoting=csv.QUOTE_MINIMAL)
 
-        label_file = open(str(Path(eval_dir) / "labels.txt"), 'w', newline='')
-        # label_writer = csv.writer(label_file, delimiter=' ', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+        label_file = open(str(Path(eval_dir) / "labels.csv"), 'w', newline='')
+        label_writer = csv.writer(label_file, delimiter=' ', quotechar='|', quoting=csv.QUOTE_MINIMAL)
 
         for xb, yb in val_bar:
-            confidenceb = model(xb.to(device))
-            predb = torch.argmax(confidenceb, dim=1)
-            labelb = torch.argmax(yb.to(device), dim=1)  # CrossEntropyLoss expects an index not a one-hot encoding
-            loss = loss_func(confidenceb, labelb).item()
+            logitsb = model(xb.to(device))
+            yb = yb.to(device)
+            labelb = torch.argmax(yb, dim=1)  # CrossEntropyLoss expects an index not a one-hot encoding
+            loss = loss_func(logitsb, labelb).item()
 
             losses.append(loss)
             nums.append(len(xb))
 
-            # predictions_writer.writerows(predb.numpy())
-            # label_writer.writerows(labelb.numpy())
-            sep = "\n"
-            predictions_file.write(np.array2string(predb.cpu().numpy(), separator=sep)[1:-1].replace(" ", "") + sep)
-            label_file.write(np.array2string(labelb.cpu().numpy(), separator=sep)[1:-1].replace(" ", "") + sep)
+            for logits, y in zip(logitsb.cpu().numpy(), yb.cpu().numpy()):
+                predictions_writer.writerow(logits)
+                label_writer.writerow(y)
 
         predictions_file.close()
         label_file.close()
