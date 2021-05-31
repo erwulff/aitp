@@ -6,3 +6,4 @@ pandas
 tqdm
 pyyaml
 h5py
+scikit-learn>=0.24.2

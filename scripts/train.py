@@ -17,7 +17,7 @@ from learning import datasets
 
 from scripts.evaluate import evaluate
 
-mpl.rc_file("scripts/my_matplotlib_rcparams")
+mpl.rc_file("my_matplotlib_rcparams")
 
 
 def main(args):
@@ -27,7 +27,7 @@ def main(args):
 
     # Model
     jedinet = get_model_from_config(cfg)  # get_model(sumO=cfg["sumO"], device=device)
-    jedinet = jedinet.to(device)
+    jedinet.to(device)
     print("Trainable parameters: {}".format(count_trainable_parameters(jedinet)))
 
     # Dataset
