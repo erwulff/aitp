@@ -12,7 +12,7 @@ class JEDIRAMDataset(Dataset):
     can result in long load times and can be a problem if your machine
     doesn't have a lot of memory.
     """
-
+    CLASS_LABELS = ["gluon", "light quark", "W", "Z", "top"]
     FILE_SIZE = 10000
 
     def __init__(self, data_dir, train=True, size=None):
@@ -57,7 +57,7 @@ class JEDIDataset(Dataset):
     This is useful if your machine can't load the entire dataset into
     memory at once.
     """
-
+    CLASS_LABELS = ["gluon", "light quark", "W", "Z", "top"]
     JET_IMAGE_SIZE = 90000
     FILE_SIZE = 10000
 
@@ -110,6 +110,7 @@ class TinyJEDIDataset(Dataset):
     This dataset class loads a samll fraction of the total JEDI-net dataset.
     """
 
+    CLASS_LABELS = ["gluon", "light quark", "W", "Z", "top"]
     FILE_SIZE = 10000
 
     def __init__(self, data_dir, train=True, size=None):

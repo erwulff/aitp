@@ -50,25 +50,33 @@ def compute_roc_stats(eval_dir):
 
     return fpr, tpr, roc_auc
 
-def plot_roc_stats(fpr, tpr, roc_auc, save_file_path=None, legend_fontsize="x-large"):
-    mpl.rc_file("my_matplotlib_rcparams")
+def plot_roc_stats(fpr, tpr, roc_auc, save_file_path=None,
+                   legend_fontsize="x-large", xscale="linear", class_labels=None,
+                  show_averages=False):
     n_classes = len(fpr.keys()) - 2
     plt.figure()
-    plt.plot(fpr["micro"], tpr["micro"],
-             label='micro-average (area = {0:0.2f})'.format(roc_auc["micro"]),
-             color='deeppink', linestyle=':', linewidth=4)
 
-    plt.plot(fpr["macro"], tpr["macro"],
-             label='macro-average (area = {0:0.2f})'.format(roc_auc["macro"]),
-             color='navy', linestyle=':', linewidth=4)
+    if show_averages:
+        plt.plot(fpr["micro"], tpr["micro"],
+                 label='micro-average (area = {0:0.2f})'.format(roc_auc["micro"]),
+                 color='deeppink', linestyle=':', linewidth=4)
+
+        plt.plot(fpr["macro"], tpr["macro"],
+                 label='macro-average (area = {0:0.2f})'.format(roc_auc["macro"]),
+                 color='navy', linestyle=':', linewidth=4)
 
     for ii in range(n_classes):
+        label = 'Class {0} (area = {1:0.2f})'.format(ii, roc_auc[ii]) if class_labels is None else class_labels[ii]
         plt.plot(fpr[ii], tpr[ii],
-                 label='Class {0} (area = {1:0.2f})'.format(ii, roc_auc[ii]))
+                 label=label)
 
-    plt.plot([0, 1], [0, 1], 'k--')
-    plt.xlim([0.0, 1.0])
+    if xscale == "linear":
+        plt.xlim([0.0, 1.0])
+        plt.plot([0, 1], [0, 1], 'k--')
+    elif xscale == "log":
+        plt.xlim([5e-4, 1.0])
     plt.ylim([0.0, 1.05])
+    plt.xscale(xscale)
     plt.xlabel('False Positive Rate (FPR)')
     plt.ylabel('True Positive Rate (TPR)')
     plt.legend(fontsize=legend_fontsize)
@@ -150,4 +158,8 @@ if __name__ == "__main__":
         eval_dir = args.evaluation_dir
     evaluate(model, args.config, eval_dir)
     fpr, tpr, roc_auc = compute_roc_stats(eval_dir)
-    plot_roc_stats(fpr, tpr, roc_auc, save_file_path=Path(eval_dir) / "roc.jpg")
+
+    cfg = open_config(args.config)
+    dataset_class = getattr(datasets, cfg["dataset_class"])
+    plot_roc_stats(fpr, tpr, roc_auc, save_file_path=Path(eval_dir) / "roc.jpg",
+                   class_labels=dataset_class.CLASS_LABELS, xscale="log")
