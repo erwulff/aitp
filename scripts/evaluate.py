@@ -9,6 +9,8 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import csv
 
+from pandas import DataFrame
+
 from sklearn.metrics import roc_curve, auc
 from sklearn.preprocessing import label_binarize
 
@@ -69,7 +71,7 @@ def plot_roc_stats(fpr, tpr, roc_auc, save_file_path=None,
 
     for ii in range(n_classes):
         label = "Class {0}" if class_labels is None else class_labels[ii]
-        label = label + ": AUC = {1:0.4f}".format(ii, roc_auc[ii])
+        label = label + ": AUC = {:0.4f}".format(roc_auc[ii])
         plt.plot(fpr[ii], tpr[ii],
                  label=label)
 
@@ -82,11 +84,26 @@ def plot_roc_stats(fpr, tpr, roc_auc, save_file_path=None,
     plt.xscale(xscale)
     plt.xlabel('False Positive Rate (FPR)')
     plt.ylabel('True Positive Rate (TPR)')
-    plt.legend(fontsize=legend_fontsize)
+    plt.legend(fontsize=legend_fontsize, loc="best")
     if save_file_path is not None:
         plt.savefig(save_file_path)
     else:
         plt.show()
+
+def _print_tpr_at_fpr(fpr, tpr, labels, suppress=False):
+    tpr_at_fpr10 = {}
+    tpr_at_fpr1 = {}
+    for ii in range(len(labels)):
+        tpr_at_fpr10[ii] = np.interp(0.1, fpr[ii], tpr[ii])
+        tpr_at_fpr1[ii] = np.interp(0.01, fpr[ii], tpr[ii])
+    tpr_fpr_summary = DataFrame([tpr_at_fpr10, tpr_at_fpr1], index=["FPR=10%", "FPR= 1%"])
+    tpr_fpr_summary.rename(
+        columns={x: key for x, key in zip(range(len(labels)), labels)},
+        inplace=True,
+    )
+    if not suppress:
+        print(tpr_fpr_summary)
+    return tpr_at_fpr10, tpr_at_fpr1
 
 
 def evaluate(model, cfg, eval_dir):
@@ -163,5 +180,6 @@ if __name__ == "__main__":
     fpr, tpr, roc_auc = compute_roc_stats(eval_dir)
 
     dataset_class = getattr(datasets, cfg["dataset_class"])
+    _print_tpr_at_fpr(fpr, tpr, labels=dataset_class.CLASS_LABELS)
     plot_roc_stats(fpr, tpr, roc_auc, save_file_path=Path(eval_dir) / "roc.jpg",
                    class_labels=dataset_class.CLASS_LABELS, xscale="log")
