@@ -39,8 +39,7 @@ def create_train_dir(prefix):
 def save_model(model, save_path):
     torch.save(model.state_dict(), save_path)
 
-def load_model(config, checkpoint, device=None):
-    cfg = open_config(config)
+def load_model(cfg, checkpoint, device=None):
     model = get_model_from_config(cfg)
     checkpoint = torch.load(checkpoint, map_location=device or torch.device(cfg["device"]))
     model.load_state_dict(checkpoint["model_state_dict"])

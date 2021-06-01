@@ -17,6 +17,8 @@ from learning.train_utils import loss_batch
 from learning import datasets
 
 
+mpl.rc_file("my_matplotlib_rcparams")
+
 def read_eval_files(eval_dir):
     labels = np.genfromtxt(str(Path(eval_dir) / "labels.csv"), delimiter=' ')
     logits = np.genfromtxt(str(Path(eval_dir) / "predictions.csv"), delimiter=' ')
@@ -58,15 +60,16 @@ def plot_roc_stats(fpr, tpr, roc_auc, save_file_path=None,
 
     if show_averages:
         plt.plot(fpr["micro"], tpr["micro"],
-                 label='micro-average (area = {0:0.2f})'.format(roc_auc["micro"]),
+                 label='micro-average (area = {0:0.4f})'.format(roc_auc["micro"]),
                  color='deeppink', linestyle=':', linewidth=4)
 
         plt.plot(fpr["macro"], tpr["macro"],
-                 label='macro-average (area = {0:0.2f})'.format(roc_auc["macro"]),
+                 label='macro-average (area = {0:0.4f})'.format(roc_auc["macro"]),
                  color='navy', linestyle=':', linewidth=4)
 
     for ii in range(n_classes):
-        label = 'Class {0} (area = {1:0.2f})'.format(ii, roc_auc[ii]) if class_labels is None else class_labels[ii]
+        label = "Class {0}" if class_labels is None else class_labels[ii]
+        label = label + ": AUC = {1:0.4f}".format(ii, roc_auc[ii])
         plt.plot(fpr[ii], tpr[ii],
                  label=label)
 
@@ -75,7 +78,7 @@ def plot_roc_stats(fpr, tpr, roc_auc, save_file_path=None,
         plt.plot([0, 1], [0, 1], 'k--')
     elif xscale == "log":
         plt.xlim([5e-4, 1.0])
-    plt.ylim([0.0, 1.05])
+    plt.ylim([0.0, 1.0])
     plt.xscale(xscale)
     plt.xlabel('False Positive Rate (FPR)')
     plt.ylabel('True Positive Rate (TPR)')
@@ -86,11 +89,10 @@ def plot_roc_stats(fpr, tpr, roc_auc, save_file_path=None,
         plt.show()
 
 
-def evaluate(model, config, eval_dir):
+def evaluate(model, cfg, eval_dir):
 
     Path(eval_dir).mkdir(parents=True, exist_ok=True)
 
-    cfg = open_config(config)
     model.eval()
 
     device = cfg["device"]
@@ -151,15 +153,15 @@ def parse_args():
 
 if __name__ == "__main__":
     args = parse_args()
-    model = load_model(args.config, args.checkpoint)
+    cfg = open_config(args.config)
+    model = load_model(cfg, args.checkpoint)
     if args.evaluation_dir is None:
         eval_dir = str(Path(args.checkpoint).parent.parent / "evaluation")
     else:
         eval_dir = args.evaluation_dir
-    evaluate(model, args.config, eval_dir)
+    evaluate(model, cfg, eval_dir)
     fpr, tpr, roc_auc = compute_roc_stats(eval_dir)
 
-    cfg = open_config(args.config)
     dataset_class = getattr(datasets, cfg["dataset_class"])
     plot_roc_stats(fpr, tpr, roc_auc, save_file_path=Path(eval_dir) / "roc.jpg",
                    class_labels=dataset_class.CLASS_LABELS, xscale="log")

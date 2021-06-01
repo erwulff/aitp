@@ -76,7 +76,7 @@ def main(args):
     print(train_stats)
     evaluation_dir = train_dir / "evaluation"
     evaluation_dir.mkdir()
-    evaluate(jedinet, args.config, evaluation_dir)
+    evaluate(jedinet, cfg, evaluation_dir)
     plot_losses(train_stats, show=False, save_path=evaluation_dir / "loss_curves.jpg")
 
 
