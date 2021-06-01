@@ -15,7 +15,7 @@ from learning.utils import count_trainable_parameters, plot_losses, create_train
 from learning.datasets import JEDIDataset, TinyJEDIDataset, JEDIRAMDataset
 from learning import datasets
 
-from scripts.evaluate import evaluate
+from scripts.evaluate import evaluate, compute_roc_stats, plot_roc_stats
 
 mpl.rc_file("my_matplotlib_rcparams")
 
@@ -78,6 +78,12 @@ def main(args):
     evaluation_dir.mkdir()
     evaluate(jedinet, cfg, evaluation_dir)
     plot_losses(train_stats, show=False, save_path=evaluation_dir / "loss_curves.jpg")
+
+    fpr, tpr, roc_auc = compute_roc_stats(evaluation_dir)
+
+    dataset_class = getattr(datasets, cfg["dataset_class"])
+    plot_roc_stats(fpr, tpr, roc_auc, save_file_path=evaluation_dir / "roc.jpg",
+                   class_labels=dataset_class.CLASS_LABELS, xscale="log")
 
 
 def parse_args():
