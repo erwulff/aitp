@@ -1,3 +1,4 @@
+import torch
 import numpy as np
 from pathlib import Path
 import h5py
@@ -6,17 +7,29 @@ from math import floor, ceil
 from torch.utils.data import Dataset
 
 
-class JEDIRAMDataset(Dataset):
+class MetaJediDataset(Dataset):
+    CLASS_LABELS = ["gluon", "light quark", "W", "Z", "top"]
+    FILE_SIZE = 10000
+
+    def __init__(self, data_dir, train, size=None, transform=None):
+        self.size = size
+        self.transform = transform
+
+    def __getitem__(self, index):
+        raise NotImplementedError
+
+    def __len__(self):
+        return self.size
+
+
+class JEDIRAMDataset(MetaJediDataset):
     """
     This dataset class loads the entire dataset into memory. This
     can result in long load times and can be a problem if your machine
     doesn't have a lot of memory.
     """
-    CLASS_LABELS = ["gluon", "light quark", "W", "Z", "top"]
-    FILE_SIZE = 10000
-
-    def __init__(self, data_dir, train=True, size=None):
-        self.size = size
+    def __init__(self, data_dir, train, size=None, transform=None):
+        super().__init__(data_dir, train=train, size=size, transform=transform)
 
         if train:
             split_dir = Path(data_dir) / "train"
@@ -44,24 +57,24 @@ class JEDIRAMDataset(Dataset):
         self.Y = np.concatenate(label_list, axis=0)
 
     def __getitem__(self, index):
-        return self.X[index, ::], self.Y[index, ::]
+        sample = torch.tensor(self.X[index, ::]), torch.tensor(self.Y[index, ::])
+        if self.transform:
+            sample = self.transform(sample)
+        return sample
 
-    def __len__(self):
-        return self.size  # len(self.X)
 
-
-class JEDIDataset(Dataset):
+class JEDIDataset(MetaJediDataset):
     """
     This dataset class uses the file structure in the JEDI-net data
     in order to only load the necessary files when they are needed.
     This is useful if your machine can't load the entire dataset into
     memory at once.
     """
-    CLASS_LABELS = ["gluon", "light quark", "W", "Z", "top"]
     JET_IMAGE_SIZE = 90000
-    FILE_SIZE = 10000
 
-    def __init__(self, data_dir, train=True, size=None):
+    def __init__(self, data_dir, train, size=None, transform=None):
+        super().__init__(data_dir, train=train, size=size, transform=transform)
+
         self.train = train
         self.size = size
 
@@ -98,22 +111,19 @@ class JEDIDataset(Dataset):
         file_name = "jetImage_{}_150p_{}_{}_JEDI.h5".format(i_jet_image, i_low, i_high)
         assert file_name in [str(path.name) for path in self.split_dir.glob("*JEDI*")], print(file_name, i_a, i_jet_image, i_b)
         file = h5py.File(str(self.split_dir / file_name))
+        sample = torch.tensor(file["X"][i_file]), torch.tensor(file["Y"][i_file])
+        if self.transform:
+            sample = self.transform(sample)
+        return sample
 
-        return np.array(file["X"][i_file]), np.array(file["Y"][i_file])
 
-    def __len__(self):
-        return self.size
-
-
-class TinyJEDIDataset(Dataset):
+class TinyJEDIDataset(MetaJediDataset):
     """
     This dataset class loads a samll fraction of the total JEDI-net dataset.
     """
+    def __init__(self, data_dir, train, size=None, transform=None):
+        super().__init__(data_dir, train=train, size=size, transform=transform)
 
-    CLASS_LABELS = ["gluon", "light quark", "W", "Z", "top"]
-    FILE_SIZE = 10000
-
-    def __init__(self, data_dir, train=True, size=None):
         if size is not None:
             assert size <= self.FILE_SIZE, "maximum size of TinyJEDIDataset is {}".format(self.FILE_SIZE)
             self.size = size
@@ -127,8 +137,7 @@ class TinyJEDIDataset(Dataset):
 
     def __getitem__(self, index):
         file = h5py.File(str(self.file_name))
-
-        return np.array(file["X"][index]), np.array(file["Y"][index])
-
-    def __len__(self):
-        return self.size
+        sample = torch.tensor(file["X"][index]), torch.tensor(file["Y"][index])
+        if self.transform:
+            sample = self.transform(sample)
+        return sample

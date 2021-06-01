@@ -14,6 +14,7 @@ from learning.train_utils import fit, get_data, CheckpointSaver
 from learning.utils import count_trainable_parameters, plot_losses, create_train_dir, open_config
 from learning.datasets import JEDIDataset, TinyJEDIDataset, JEDIRAMDataset
 from learning import datasets
+from learning.transforms import SmoothLabels
 
 from scripts.evaluate import evaluate, compute_roc_stats, plot_roc_stats, _print_tpr_at_fpr
 
@@ -33,8 +34,14 @@ def main(args):
     # Dataset
     data_dir = cfg["data_dir"]
     dataset_class = getattr(datasets, cfg["dataset_class"])
-    train_dataset = dataset_class(data_dir, train=True, size=cfg["train_size"])
-    val_dataset = dataset_class(data_dir, train=False, size=cfg["val_size"])
+
+    if cfg["smooth_labels"]:
+        transform = SmoothLabels(alpha=cfg["smooth_labels_alpha"], n_classes=len(dataset_class.CLASS_LABELS))
+    else:
+        transform=None
+
+    train_dataset = dataset_class(data_dir, train=True, size=cfg["train_size"], transform=transform)
+    val_dataset = dataset_class(data_dir, train=False, size=cfg["val_size"], transform=transform)
     print("Training set size:", len(train_dataset))
     print("Validation set size:", len(val_dataset))
 

@@ -14,6 +14,8 @@ data_dir: "../data/hls4ml_LHCjet_150p/hls4ml_LHCjet_150p_JEDI"
 dataset_class: "JEDIDataset"
 train_size: 630000
 val_size: 260000
+smooth_labels: True
+smooth_labels_alpha: 0.1
 # Other
 device: "cuda"
 dataloader_num_workers: 2
