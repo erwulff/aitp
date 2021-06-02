@@ -103,7 +103,7 @@ def _print_tpr_at_fpr(fpr, tpr, labels, suppress=False):
     )
     if not suppress:
         print(tpr_fpr_summary)
-    return tpr_at_fpr10, tpr_at_fpr1
+    return tpr_at_fpr10, tpr_at_fpr1, tpr_fpr_summary
 
 
 def evaluate(model, cfg, eval_dir):
@@ -153,12 +153,21 @@ def evaluate(model, cfg, eval_dir):
         label_file.close()
 
     val_loss = np.sum(np.multiply(losses, nums)) / np.sum(nums)
+
+    fpr, tpr, roc_auc = compute_roc_stats(eval_dir)
+
+    dataset_class = getattr(datasets, cfg["dataset_class"])
+    _, _, tpr_fpr_summary = _print_tpr_at_fpr(fpr, tpr, labels=dataset_class.CLASS_LABELS)
+    plot_roc_stats(fpr, tpr, roc_auc, save_file_path=Path(eval_dir) / "roc.jpg",
+                   class_labels=dataset_class.CLASS_LABELS, xscale="log")
+
     print("Validation loss: {}".format(val_loss))
     with open(str(Path(eval_dir) / "results.txt"), "a") as f:
         f.write("Validation loss: {}\n".format(val_loss))
         f.write("model_name: {}\n".format(cfg["model_name"]))
         f.write("dataset_class: {}\n".format(cfg["dataset_class"]))
         f.write("val_size: {}\n".format(cfg["val_size"]))
+        f.write("\n" + tpr_fpr_summary.to_string())
 
 
 def parse_args():
@@ -171,15 +180,10 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()
     cfg = open_config(args.config)
-    model = load_model(cfg, args.checkpoint)
     if args.evaluation_dir is None:
         eval_dir = str(Path(args.checkpoint).parent.parent / "evaluation")
     else:
         eval_dir = args.evaluation_dir
-    evaluate(model, cfg, eval_dir)
-    fpr, tpr, roc_auc = compute_roc_stats(eval_dir)
 
-    dataset_class = getattr(datasets, cfg["dataset_class"])
-    _print_tpr_at_fpr(fpr, tpr, labels=dataset_class.CLASS_LABELS)
-    plot_roc_stats(fpr, tpr, roc_auc, save_file_path=Path(eval_dir) / "roc.jpg",
-                   class_labels=dataset_class.CLASS_LABELS, xscale="log")
+    model = load_model(cfg, args.checkpoint)
+    evaluate(model, cfg, eval_dir)
