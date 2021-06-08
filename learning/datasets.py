@@ -38,18 +38,14 @@ class JEDIRAMDataset(MetaJediDataset):
             if self.size == None:
                 self.size = 630000
             else:
-                assert self.size <= max_size, "max_size is {}, self.size is {}".format(
-                    max_size, self.size
-                )
+                assert self.size <= max_size, "max_size is {}, self.size is {}".format(max_size, self.size)
         else:
             split_dir = Path(data_dir) / "val"
             max_size = len(list(split_dir.glob("*JEDI*"))) * self.FILE_SIZE
             if self.size == None:
                 self.size = 260000
             else:
-                assert self.size <= max_size, "max_size is {}, self.size is {}".format(
-                    max_size, self.size
-                )
+                assert self.size <= max_size, "max_size is {}, self.size is {}".format(max_size, self.size)
 
         data_list = []
         label_list = []
@@ -90,18 +86,14 @@ class JEDIDataset(MetaJediDataset):
             if self.size == None:
                 self.size = 630000
             else:
-                assert self.size <= max_size, "max_size is {}, self.size is {}".format(
-                    max_size, self.size
-                )
+                assert self.size <= max_size, "max_size is {}, self.size is {}".format(max_size, self.size)
         else:
             self.split_dir = Path(data_dir) / "val"
             max_size = len(list(self.split_dir.glob("*JEDI*"))) * self.FILE_SIZE
             if self.size == None:
                 self.size = 260000
             else:
-                assert self.size <= max_size, "max_size is {}, self.size is {}".format(
-                    max_size, self.size
-                )
+                assert self.size <= max_size, "max_size is {}, self.size is {}".format(max_size, self.size)
 
     def __getitem__(self, index):
         if not self.train:
@@ -119,9 +111,9 @@ class JEDIDataset(MetaJediDataset):
         i_file = i_b % self.FILE_SIZE  # index within file
 
         file_name = "jetImage_{}_150p_{}_{}_JEDI.h5".format(i_jet_image, i_low, i_high)
-        assert file_name in [
-            str(path.name) for path in self.split_dir.glob("*JEDI*")
-        ], print(file_name, i_a, i_jet_image, i_b)
+        assert file_name in [str(path.name) for path in self.split_dir.glob("*JEDI*")], print(
+            file_name, i_a, i_jet_image, i_b
+        )
         file = h5py.File(str(self.split_dir / file_name))
         sample = torch.tensor(file["X"][i_file]), torch.tensor(file["Y"][i_file])
         if self.transform:
@@ -138,9 +130,7 @@ class TinyJEDIDataset(MetaJediDataset):
         super().__init__(data_dir, train=train, size=size, transform=transform)
 
         if size is not None:
-            assert (
-                size <= self.FILE_SIZE
-            ), "maximum size of TinyJEDIDataset is {}".format(self.FILE_SIZE)
+            assert size <= self.FILE_SIZE, "maximum size of TinyJEDIDataset is {}".format(self.FILE_SIZE)
             self.size = size
         else:
             self.size = self.FILE_SIZE

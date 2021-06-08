@@ -14,9 +14,7 @@ mpl.rc_file("my_matplotlib_rcparams")
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", "-c", default=None, required=True, type=str)
-    parser.add_argument(
-        "--evaluation_dir", "-e", default=None, required=False, type=str
-    )
+    parser.add_argument("--evaluation_dir", "-e", default=None, required=False, type=str)
     return parser.parse_args()
 
 

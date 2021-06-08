@@ -116,9 +116,7 @@ def _print_tpr_at_fpr(fpr, tpr, labels, suppress=False):
     for ii in range(len(labels)):
         tpr_at_fpr10[ii] = np.interp(0.1, fpr[ii], tpr[ii])
         tpr_at_fpr1[ii] = np.interp(0.01, fpr[ii], tpr[ii])
-    tpr_fpr_summary = DataFrame(
-        [tpr_at_fpr10, tpr_at_fpr1], index=["FPR=10%", "FPR= 1%"]
-    )
+    tpr_fpr_summary = DataFrame([tpr_at_fpr10, tpr_at_fpr1], index=["FPR=10%", "FPR= 1%"])
     tpr_fpr_summary.rename(
         columns={x: key for x, key in zip(range(len(labels)), labels)},
         inplace=True,
@@ -146,32 +144,22 @@ def evaluate(model, cfg, eval_dir):
 
     # Training parameters
     loss_func = nn.CrossEntropyLoss(weight=torch.Tensor([1, 1, 1, 1, 1]).to(device))
-    val_dl = DataLoader(
-        val_dataset, batch_size=bs * 2, num_workers=dl_num_workers, pin_memory=True
-    )
+    val_dl = DataLoader(val_dataset, batch_size=bs * 2, num_workers=dl_num_workers, pin_memory=True)
 
     val_bar = tqdm(val_dl, total=len(val_dl), desc="Evaluating")
     with torch.no_grad():
         losses = []
         nums = []
-        predictions_file = open(
-            str(Path(eval_dir) / "predictions.csv"), "w", newline=""
-        )
-        predictions_writer = csv.writer(
-            predictions_file, delimiter=" ", quotechar="|", quoting=csv.QUOTE_MINIMAL
-        )
+        predictions_file = open(str(Path(eval_dir) / "predictions.csv"), "w", newline="")
+        predictions_writer = csv.writer(predictions_file, delimiter=" ", quotechar="|", quoting=csv.QUOTE_MINIMAL)
 
         label_file = open(str(Path(eval_dir) / "labels.csv"), "w", newline="")
-        label_writer = csv.writer(
-            label_file, delimiter=" ", quotechar="|", quoting=csv.QUOTE_MINIMAL
-        )
+        label_writer = csv.writer(label_file, delimiter=" ", quotechar="|", quoting=csv.QUOTE_MINIMAL)
 
         for xb, yb in val_bar:
             logitsb = model(xb.to(device))
             yb = yb.to(device)
-            labelb = torch.argmax(
-                yb, dim=1
-            )  # CrossEntropyLoss expects an index not a one-hot encoding
+            labelb = torch.argmax(yb, dim=1)  # CrossEntropyLoss expects an index not a one-hot encoding
             loss = loss_func(logitsb, labelb).item()
 
             losses.append(loss)
@@ -189,9 +177,7 @@ def evaluate(model, cfg, eval_dir):
     fpr, tpr, roc_auc = compute_roc_stats(eval_dir)
 
     dataset_class = getattr(datasets, cfg["dataset_class"])
-    _, _, tpr_fpr_summary = _print_tpr_at_fpr(
-        fpr, tpr, labels=dataset_class.CLASS_LABELS
-    )
+    _, _, tpr_fpr_summary = _print_tpr_at_fpr(fpr, tpr, labels=dataset_class.CLASS_LABELS)
     plot_roc_stats(
         fpr,
         tpr,
@@ -214,9 +200,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", "-c", default=None, required=True, type=str)
     parser.add_argument("--checkpoint", "-p", default=None, required=True, type=str)
-    parser.add_argument(
-        "--evaluation_dir", "-e", default=None, required=False, type=str
-    )
+    parser.add_argument("--evaluation_dir", "-e", default=None, required=False, type=str)
     return parser.parse_args()
 
 

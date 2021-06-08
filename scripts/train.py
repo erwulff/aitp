@@ -46,18 +46,12 @@ def main(args):
     dataset_class = getattr(datasets, cfg["dataset_class"])
 
     if cfg["smooth_labels"]:
-        transform = SmoothLabels(
-            alpha=cfg["smooth_labels_alpha"], n_classes=len(dataset_class.CLASS_LABELS)
-        )
+        transform = SmoothLabels(alpha=cfg["smooth_labels_alpha"], n_classes=len(dataset_class.CLASS_LABELS))
     else:
         transform = None
 
-    train_dataset = dataset_class(
-        data_dir, train=True, size=cfg["train_size"], transform=transform
-    )
-    val_dataset = dataset_class(
-        data_dir, train=False, size=cfg["val_size"], transform=transform
-    )
+    train_dataset = dataset_class(data_dir, train=True, size=cfg["train_size"], transform=transform)
+    val_dataset = dataset_class(data_dir, train=False, size=cfg["val_size"], transform=transform)
     print("Training set size:", len(train_dataset))
     print("Validation set size:", len(val_dataset))
 
@@ -75,15 +69,11 @@ def main(args):
     if cfg["lr_schedule"] == "constant":
         lr_scheduler = None
     elif cfg["lr_schedule"] == "onecycle":
-        lr_scheduler = OneCycleLR(
-            opt, max_lr=lr, steps_per_epoch=len(train_dl), epochs=epochs
-        )
+        lr_scheduler = OneCycleLR(opt, max_lr=lr, steps_per_epoch=len(train_dl), epochs=epochs)
     elif cfg["lr_schedule"] == "cosinedecay":
         lr_scheduler = CosineAnnealingLR(opt, T_max=len(train_dl) * epochs)
     else:
-        raise ValueError(
-            "Supported values for lr_schedule are 'constant', 'onecycle' and 'cosinedecay'."
-        )
+        raise ValueError("Supported values for lr_schedule are 'constant', 'onecycle' and 'cosinedecay'.")
 
     train_dir = create_train_dir(args.prefix)
     shutil.copyfile(args.config, str(Path(train_dir) / Path(args.config).name))
