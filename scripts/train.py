@@ -11,12 +11,22 @@ from torch.optim.lr_scheduler import OneCycleLR, CosineAnnealingLR
 
 from learning.models import get_model_from_config
 from learning.train_utils import fit, get_data, CheckpointSaver
-from learning.utils import count_trainable_parameters, plot_losses, create_train_dir, open_config
+from learning.utils import (
+    count_trainable_parameters,
+    plot_losses,
+    create_train_dir,
+    open_config,
+)
 from learning.datasets import JEDIDataset, TinyJEDIDataset, JEDIRAMDataset
 from learning import datasets
 from learning.transforms import SmoothLabels
 
-from scripts.evaluate import evaluate, compute_roc_stats, plot_roc_stats, _print_tpr_at_fpr
+from scripts.evaluate import (
+    evaluate,
+    compute_roc_stats,
+    plot_roc_stats,
+    _print_tpr_at_fpr,
+)
 
 mpl.rc_file("my_matplotlib_rcparams")
 
@@ -36,12 +46,18 @@ def main(args):
     dataset_class = getattr(datasets, cfg["dataset_class"])
 
     if cfg["smooth_labels"]:
-        transform = SmoothLabels(alpha=cfg["smooth_labels_alpha"], n_classes=len(dataset_class.CLASS_LABELS))
+        transform = SmoothLabels(
+            alpha=cfg["smooth_labels_alpha"], n_classes=len(dataset_class.CLASS_LABELS)
+        )
     else:
-        transform=None
+        transform = None
 
-    train_dataset = dataset_class(data_dir, train=True, size=cfg["train_size"], transform=transform)
-    val_dataset = dataset_class(data_dir, train=False, size=cfg["val_size"], transform=transform)
+    train_dataset = dataset_class(
+        data_dir, train=True, size=cfg["train_size"], transform=transform
+    )
+    val_dataset = dataset_class(
+        data_dir, train=False, size=cfg["val_size"], transform=transform
+    )
     print("Training set size:", len(train_dataset))
     print("Validation set size:", len(val_dataset))
 
@@ -59,11 +75,15 @@ def main(args):
     if cfg["lr_schedule"] == "constant":
         lr_scheduler = None
     elif cfg["lr_schedule"] == "onecycle":
-        lr_scheduler = OneCycleLR(opt, max_lr=lr, steps_per_epoch=len(train_dl), epochs=epochs)
+        lr_scheduler = OneCycleLR(
+            opt, max_lr=lr, steps_per_epoch=len(train_dl), epochs=epochs
+        )
     elif cfg["lr_schedule"] == "cosinedecay":
         lr_scheduler = CosineAnnealingLR(opt, T_max=len(train_dl) * epochs)
     else:
-        raise ValueError("Supported values for lr_schedule are 'constant', 'onecycle' and 'cosinedecay'.")
+        raise ValueError(
+            "Supported values for lr_schedule are 'constant', 'onecycle' and 'cosinedecay'."
+        )
 
     train_dir = create_train_dir(args.prefix)
     shutil.copyfile(args.config, str(Path(train_dir) / Path(args.config).name))
@@ -77,7 +97,17 @@ def main(args):
     )
 
     # Train
-    train_stats = fit(epochs, jedinet, loss_func, opt, train_dl, val_dl, lr_scheduler, device, checkpoint_saver)
+    train_stats = fit(
+        epochs,
+        jedinet,
+        loss_func,
+        opt,
+        train_dl,
+        val_dl,
+        lr_scheduler,
+        device,
+        checkpoint_saver,
+    )
 
     # Evaluation
     print(train_stats)
@@ -90,8 +120,14 @@ def main(args):
 
     dataset_class = getattr(datasets, cfg["dataset_class"])
     _print_tpr_at_fpr(fpr, tpr, labels=dataset_class.CLASS_LABELS)
-    plot_roc_stats(fpr, tpr, roc_auc, save_file_path=evaluation_dir / "roc.jpg",
-                   class_labels=dataset_class.CLASS_LABELS, xscale="log")
+    plot_roc_stats(
+        fpr,
+        tpr,
+        roc_auc,
+        save_file_path=evaluation_dir / "roc.jpg",
+        class_labels=dataset_class.CLASS_LABELS,
+        xscale="log",
+    )
 
 
 def parse_args():

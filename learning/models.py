@@ -77,7 +77,9 @@ class GraphNet(nn.Module):
     def assign_matrices(self):
         self.Rr = torch.zeros(self.N, self.Nr)
         self.Rs = torch.zeros(self.N, self.Nr)
-        receiver_sender_list = [i for i in itertools.product(range(self.N), range(self.N)) if i[0] != i[1]]
+        receiver_sender_list = [
+            i for i in itertools.product(range(self.N), range(self.N)) if i[0] != i[1]
+        ]
         for i, (r, s) in enumerate(receiver_sender_list):
             self.Rr[r, i] = 1
             self.Rs[s, i] = 1
@@ -289,7 +291,9 @@ class GraphNetOld(nn.Module):
     def assign_matrices(self):
         self.Rr = torch.zeros(self.N, self.Nr)
         self.Rs = torch.zeros(self.N, self.Nr)
-        receiver_sender_list = [i for i in itertools.product(range(self.N), range(self.N)) if i[0] != i[1]]
+        receiver_sender_list = [
+            i for i in itertools.product(range(self.N), range(self.N)) if i[0] != i[1]
+        ]
         for i, (r, s) in enumerate(receiver_sender_list):
             self.Rr[r, i] = 1
             self.Rs[s, i] = 1
@@ -426,6 +430,7 @@ def get_model_old(sumO, device):
         sum_O=sumO,
     )
     return mymodel
+
 
 def get_model_from_config(config):
     if config["model_name"] == "GraphNetOld":
