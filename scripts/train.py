@@ -16,6 +16,7 @@ from learning.utils import (
     plot_losses,
     create_train_dir,
     open_config,
+    load_model,
 )
 from learning.datasets import JEDIDataset, TinyJEDIDataset, JEDIRAMDataset
 from learning import datasets
@@ -25,7 +26,7 @@ from scripts.evaluate import (
     evaluate,
     compute_roc_stats,
     plot_roc_stats,
-    _print_tpr_at_fpr,
+    get_latest_checkpoint,
 )
 
 mpl.rc_file("my_matplotlib_rcparams")
@@ -103,13 +104,19 @@ def main(args):
     print(train_stats)
     evaluation_dir = train_dir / "evaluation"
     evaluation_dir.mkdir()
+
+    # Ensure we use the best performing checkpoint for evaluation
+    # If we only save checkpoints when the model imrpoves we can simply get the latest checkpoint,
+    # if instead we save after every epoch we need to find the best checkpoint based on val loss instead
+    checkpoint_file = get_latest_checkpoint(train_dir)
+    jedinet = load_model(cfg, checkpoint_file)
+
     evaluate(jedinet, cfg, evaluation_dir)
     plot_losses(train_stats, show=False, save_path=evaluation_dir / "loss_curves.jpg")
 
     fpr, tpr, roc_auc = compute_roc_stats(evaluation_dir)
 
     dataset_class = getattr(datasets, cfg["dataset_class"])
-    _print_tpr_at_fpr(fpr, tpr, labels=dataset_class.CLASS_LABELS)
     plot_roc_stats(
         fpr,
         tpr,

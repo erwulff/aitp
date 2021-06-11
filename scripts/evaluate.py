@@ -128,7 +128,8 @@ def _print_tpr_at_fpr(fpr, tpr, labels, suppress=False):
 
 def evaluate(model, cfg, eval_dir):
 
-    Path(eval_dir).mkdir(parents=True, exist_ok=True)
+    eval_dir = Path(eval_dir)
+    eval_dir.mkdir(parents=True, exist_ok=True)
 
     model.eval()
 
@@ -150,10 +151,10 @@ def evaluate(model, cfg, eval_dir):
     with torch.no_grad():
         losses = []
         nums = []
-        predictions_file = open(str(Path(eval_dir) / "predictions.csv"), "w", newline="")
+        predictions_file = open(str(eval_dir / "predictions.csv"), "w", newline="")
         predictions_writer = csv.writer(predictions_file, delimiter=" ", quotechar="|", quoting=csv.QUOTE_MINIMAL)
 
-        label_file = open(str(Path(eval_dir) / "labels.csv"), "w", newline="")
+        label_file = open(str(eval_dir / "labels.csv"), "w", newline="")
         label_writer = csv.writer(label_file, delimiter=" ", quotechar="|", quoting=csv.QUOTE_MINIMAL)
 
         for xb, yb in val_bar:
@@ -182,25 +183,34 @@ def evaluate(model, cfg, eval_dir):
         fpr,
         tpr,
         roc_auc,
-        save_file_path=Path(eval_dir) / "roc.jpg",
+        save_file_path=eval_dir / "roc.jpg",
         class_labels=dataset_class.CLASS_LABELS,
         xscale="log",
     )
 
     print("Validation loss: {}".format(val_loss))
-    with open(str(Path(eval_dir) / "results.txt"), "a") as f:
+    with open(str(eval_dir / "results.txt"), "a") as f:
         f.write("Validation loss: {}\n".format(val_loss))
         f.write("model_name: {}\n".format(cfg["model_name"]))
         f.write("dataset_class: {}\n".format(cfg["dataset_class"]))
         f.write("val_size: {}\n".format(cfg["val_size"]))
         f.write("\n" + tpr_fpr_summary.to_string())
 
+    print("Evaluation done.")
+
+
+def get_latest_checkpoint(train_dir):
+    checkpoint_list = list(Path(Path(train_dir) / "checkpoints").glob("checkpoint*.pt"))
+    checkpoint_list.sort()
+    return checkpoint_list[-1]
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", "-c", default=None, required=True, type=str)
-    parser.add_argument("--checkpoint", "-p", default=None, required=True, type=str)
+    parser.add_argument("--checkpoint", "-p", default=None, required=False, type=str)
     parser.add_argument("--evaluation_dir", "-e", default=None, required=False, type=str)
+    parser.add_argument("--train_dir", "-t", default=None, required=True, type=str)
     return parser.parse_args()
 
 
@@ -208,9 +218,17 @@ if __name__ == "__main__":
     args = parse_args()
     cfg = open_config(args.config)
     if args.evaluation_dir is None:
-        eval_dir = str(Path(args.checkpoint).parent.parent / "evaluation")
+        eval_dir = str(Path(args.train_dir) / "evaluation")
     else:
         eval_dir = args.evaluation_dir
 
-    model = load_model(cfg, args.checkpoint)
+    if args.checkpoint is not None:
+        checkpoint_file = args.checkpoint
+    else:
+        # If we only save checkpoints when the model imrpoves we can simply get the latest checkpoint,
+        # if instead we save after every epoch we need to find the best checkpoint based on val loss instead
+        checkpoint_file = get_latest_checkpoint(args.train_dir)
+
+    print("Loading checkpoint file from: {}".format(checkpoint_file))
+    model = load_model(cfg, checkpoint_file)
     evaluate(model, cfg, eval_dir)
