@@ -37,6 +37,6 @@ else
 fi
 
 python check_cuda.py
-python -m scripts.train -c configs/default_config.yml -p default_
+python -m scripts.train -c $1 -p $2
 rsync -a training_sessions/* $SLURM_SUBMIT_DIR/training_sessions
 rm -r training_sessions
