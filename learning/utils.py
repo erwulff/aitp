@@ -59,3 +59,23 @@ def load_model(cfg, checkpoint, device=None):
     checkpoint = torch.load(checkpoint, map_location=device or torch.device(cfg["device"]))
     model.load_state_dict(checkpoint["model_state_dict"])
     return model
+
+
+def get_latest_checkpoint(train_dir):
+    checkpoint_list = list(Path(Path(train_dir) / "checkpoints").glob("checkpoint*.pt"))
+    checkpoint_list.sort()
+    return checkpoint_list[-1]
+
+
+def delete_all_but_latest_ckpt(train_dir):
+    checkpoint_list = list(Path(Path(train_dir) / "checkpoints").glob("checkpoint*.pt"))
+    checkpoint_list.sort()
+    if len(checkpoint_list) == 1:
+        raise UserWarning("There is only one checkpoint. No deletion was made.")
+    elif len(checkpoint_list) == 0:
+        raise UserWarning("Couldn't find ant checkpoints. No deletion was made.")
+    else:
+        latest_ckpt = checkpoint_list.pop()
+        for ckpt in checkpoint_list:
+            ckpt.unlink()
+        print("Removed all checkpoints in {} except {}".format(train_dir, latest_ckpt))

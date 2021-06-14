@@ -19,3 +19,4 @@ smooth_labels_alpha: 0.1
 # Other
 device: "cuda"
 dataloader_num_workers: 2
+remove_checkpoints: True

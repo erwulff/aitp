@@ -14,7 +14,7 @@ from pandas import DataFrame
 from sklearn.metrics import roc_curve, auc
 from sklearn.preprocessing import label_binarize
 
-from learning.utils import load_model, open_config
+from learning.utils import load_model, open_config, get_latest_checkpoint, delete_all_but_latest_ckpt
 from learning.train_utils import loss_batch
 from learning import datasets
 
@@ -199,12 +199,6 @@ def evaluate(model, cfg, eval_dir):
     print("Evaluation done.")
 
 
-def get_latest_checkpoint(train_dir):
-    checkpoint_list = list(Path(Path(train_dir) / "checkpoints").glob("checkpoint*.pt"))
-    checkpoint_list.sort()
-    return checkpoint_list[-1]
-
-
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", "-c", default=None, required=True, type=str)
@@ -217,8 +211,9 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()
     cfg = open_config(args.config)
+    train_dir = Path(args.train_dir)
     if args.evaluation_dir is None:
-        eval_dir = str(Path(args.train_dir) / "evaluation")
+        eval_dir = str(train_dir / "evaluation")
     else:
         eval_dir = args.evaluation_dir
 
@@ -227,8 +222,10 @@ if __name__ == "__main__":
     else:
         # If we only save checkpoints when the model imrpoves we can simply get the latest checkpoint,
         # if instead we save after every epoch we need to find the best checkpoint based on val loss instead
-        checkpoint_file = get_latest_checkpoint(args.train_dir)
+        checkpoint_file = get_latest_checkpoint(train_dir)
 
     print("Loading checkpoint file from: {}".format(checkpoint_file))
     model = load_model(cfg, checkpoint_file)
     evaluate(model, cfg, eval_dir)
+    if cfg["remove_checkpoints"]:
+        delete_all_but_latest_ckpt(train_dir)

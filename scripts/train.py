@@ -17,6 +17,8 @@ from learning.utils import (
     create_train_dir,
     open_config,
     load_model,
+    get_latest_checkpoint,
+    delete_all_but_latest_ckpt,
 )
 from learning.datasets import JEDIDataset, TinyJEDIDataset, JEDIRAMDataset
 from learning import datasets
@@ -26,7 +28,6 @@ from scripts.evaluate import (
     evaluate,
     compute_roc_stats,
     plot_roc_stats,
-    get_latest_checkpoint,
 )
 
 mpl.rc_file("my_matplotlib_rcparams")
@@ -125,6 +126,9 @@ def main(args):
         class_labels=dataset_class.CLASS_LABELS,
         xscale="log",
     )
+
+    if cfg["remove_checkpoints"]:
+        delete_all_but_latest_ckpt(train_dir)
 
 
 def parse_args():
