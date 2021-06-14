@@ -110,6 +110,7 @@ def main(args):
     # If we only save checkpoints when the model imrpoves we can simply get the latest checkpoint,
     # if instead we save after every epoch we need to find the best checkpoint based on val loss instead
     checkpoint_file = get_latest_checkpoint(train_dir)
+    print("Checkpoint used for evaluating: {}".format(checkpoint_file))
     jedinet = load_model(cfg, checkpoint_file)
 
     evaluate(jedinet, cfg, evaluation_dir)

@@ -4,6 +4,7 @@ from pathlib import Path
 import torch
 from learning.models import get_model_from_config
 import yaml
+import re
 
 
 def open_config(config_file):
@@ -63,7 +64,7 @@ def load_model(cfg, checkpoint, device=None):
 
 def get_latest_checkpoint(train_dir):
     checkpoint_list = list(Path(Path(train_dir) / "checkpoints").glob("checkpoint*.pt"))
-    checkpoint_list.sort()
+    checkpoint_list.sort(key=lambda x: int(re.search("epoch\d+", str(x))[0].split("epoch")[-1]))
     return checkpoint_list[-1]
 
 
