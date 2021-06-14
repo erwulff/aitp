@@ -121,9 +121,24 @@ def _print_tpr_at_fpr(fpr, tpr, labels, suppress=False):
         columns={x: key for x, key in zip(range(len(labels)), labels)},
         inplace=True,
     )
+    paper_results = DataFrame(
+        {
+            "gluon": [0.879, 0.482],
+            "light quark": [0.818, 0.301],
+            "W": [0.927, 0.658],
+            "Z": [0.903, 0.729],
+            "top": [0.931, 0.632],
+        },
+        index=["FPR=10%", "FPR= 1%"],
+    )
+    diff = tpr_fpr_summary - paper_results
+
     if not suppress:
         print(tpr_fpr_summary)
-    return tpr_at_fpr10, tpr_at_fpr1, tpr_fpr_summary
+        print("Difference compared to JEDI-net paper:")
+        print(diff)
+
+    return tpr_at_fpr10, tpr_at_fpr1, tpr_fpr_summary, diff
 
 
 def evaluate(model, cfg, eval_dir):
@@ -178,7 +193,7 @@ def evaluate(model, cfg, eval_dir):
     fpr, tpr, roc_auc = compute_roc_stats(eval_dir)
 
     dataset_class = getattr(datasets, cfg["dataset_class"])
-    _, _, tpr_fpr_summary = _print_tpr_at_fpr(fpr, tpr, labels=dataset_class.CLASS_LABELS)
+    _, _, tpr_fpr_summary, diff = _print_tpr_at_fpr(fpr, tpr, labels=dataset_class.CLASS_LABELS)
     plot_roc_stats(
         fpr,
         tpr,
@@ -194,7 +209,9 @@ def evaluate(model, cfg, eval_dir):
         f.write("model_name: {}\n".format(cfg["model_name"]))
         f.write("dataset_class: {}\n".format(cfg["dataset_class"]))
         f.write("val_size: {}\n".format(cfg["val_size"]))
-        f.write("\n" + tpr_fpr_summary.to_string())
+        f.write("\n" + tpr_fpr_summary.to_string() + "\n")
+        f.write("Difference compared to JEDI-net paper:\n")
+        f.write(diff.to_string() + "\n")
 
     print("Evaluation done.")
 
