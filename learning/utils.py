@@ -70,7 +70,7 @@ def get_latest_checkpoint(train_dir):
 
 def delete_all_but_latest_ckpt(train_dir):
     checkpoint_list = list(Path(Path(train_dir) / "checkpoints").glob("checkpoint*.pt"))
-    checkpoint_list.sort()
+    checkpoint_list.sort(key=lambda x: int(re.search("epoch\d+", str(x))[0].split("epoch")[-1]))
     if len(checkpoint_list) == 1:
         raise UserWarning("There is only one checkpoint. No deletion was made.")
     elif len(checkpoint_list) == 0:
