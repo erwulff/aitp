@@ -43,10 +43,12 @@ def fit(
     lr_scheduler=None,
     device="cuda",
     checkpoint_saver=None,
+    master_process=True,
 ):
     since = time.time()
     epochs_train_loss = []
     epochs_val_loss = []
+    epoch_times = []
     for epoch in range(epochs):
         running_train_loss = 0.0
         epoch_start = time.perf_counter()
@@ -72,25 +74,29 @@ def fit(
         val_loss = np.sum(np.multiply(losses, nums)) / np.sum(nums)
         epochs_val_loss.append(val_loss)
         current_time = time.perf_counter()
-        delta_t = current_time - epoch_start
-        val_bar.write(
-            "Epoch: {:d} Train Loss: {:.3f} Val Loss: {:.3f}, Time: {}".format(
-                epoch, train_loss, val_loss, str(datetime.timedelta(seconds=delta_t))
+        dt = current_time - epoch_start
+        epoch_times.append(dt)
+        if master_process:
+            val_bar.write(
+                "Epoch: {:d} | Train Loss: {:.3f} | Val Loss: {:.3f} | Time: {}".format(
+                    epoch, train_loss, val_loss, str(datetime.timedelta(seconds=round(dt)))
+                )
             )
-        )
         val_bar.close()
 
         if checkpoint_saver is not None:
             checkpoint_saver.save(epoch, val_loss)
 
     time_elapsed = time.time() - since
-    print("\nTraining complete in {:.0f}m {:.0f}s".format(time_elapsed // 60, time_elapsed % 60))
+
+    if master_process:
+        print("\nTraining complete in {:.0f}m {:.0f}s".format(time_elapsed // 60, time_elapsed % 60))
     return pd.DataFrame(
         {
             "epoch": np.arange(epochs),
             "train_loss": np.array(epochs_train_loss),
             "val_loss": np.array(epochs_val_loss),
-            "epoch_time": delta_t,
+            "epoch_times": epoch_times,
         }
     )
 
@@ -122,4 +128,4 @@ class CheckpointSaver:
             },
             checkpoint_path,
         )
-        print("Checkpoint saved to {}.".format(checkpoint_path))
+        print("Checkpoint saved to: {}".format(checkpoint_path))

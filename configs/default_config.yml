@@ -3,20 +3,22 @@ model_name: GraphNetOld  # GraphNet, GraphNetOld
 sumO: True
 # Training parameters
 epochs: 250
-bs: 64
+bs: 512
 lr: 0.001
 wd: 0.001
 # loss_function: "crossentropyloss"
 # optimizer: "AdamW"
 lr_schedule: "onecycle"  # onecycle, cosinedecay, constant
 # Dataset
-data_dir: "../data/hls4ml_LHCjet_150p/hls4ml_LHCjet_150p_JEDI"
-dataset_class: "JEDIDataset"
+data_dir: "/mnt/ceph/users/ewulff/hls4ml_LHCjet_150p_JEDI"
+dataset_class: "JEDIRAMDataset"
 train_size: 630000
 val_size: 260000
 smooth_labels: True
 smooth_labels_alpha: 0.1
 # Other
 device: "cuda"
-dataloader_num_workers: 2
+dataloader_num_workers: 1
 remove_checkpoints: True
+compile: True
+eval_at_train_end: True
