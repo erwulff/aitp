@@ -12,6 +12,11 @@ from torch.utils.data.distributed import DistributedSampler
 from torch.distributed import get_world_size
 
 def get_data(train_ds, val_ds, bs, num_workers=0, prefetch_factor=None, ddp=False):
+    if isinstance(train_ds, torch.utils.data.Dataset):
+        train_sampler = DistributedSampler(train_ds, shuffle=True)
+        val_sampler = DistributedSampler(val_ds, shuffle=True)
+    else:
+        train_sampler = val_sampler = None
     return (
         DataLoader(
             train_ds,
@@ -20,6 +25,7 @@ def get_data(train_ds, val_ds, bs, num_workers=0, prefetch_factor=None, ddp=Fals
             num_workers=num_workers,
             # pin_memory=True,
             prefetch_factor=prefetch_factor,
+            sampler=train_sampler,
         ),
         DataLoader(
             val_ds,
@@ -27,6 +33,7 @@ def get_data(train_ds, val_ds, bs, num_workers=0, prefetch_factor=None, ddp=Fals
             num_workers=num_workers,
             # pin_memory=True,
             prefetch_factor=prefetch_factor,
+            sampler=val_sampler,
         ),
     )
 

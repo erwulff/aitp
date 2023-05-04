@@ -128,11 +128,11 @@ class JEDIRAMDataset(MetaJediDataset):
             data_list.append(np.array(f.get("X")))
             label_list.append(np.array(f.get("Y")))
 
-        self.X = np.concatenate(data_list, axis=0)
-        self.Y = np.concatenate(label_list, axis=0)
+        self.X = torch.tensor(np.concatenate(data_list, axis=0))
+        self.Y = torch.tensor(np.concatenate(label_list, axis=0))
 
     def __getitem__(self, index):
-        sample = torch.tensor(self.X[index, ::]), torch.tensor(self.Y[index, ::])
+        sample = self.X[index, ::], self.Y[index, ::]
         if self.transform:
             sample = self.transform(sample)
         return sample
