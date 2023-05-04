@@ -38,6 +38,7 @@ mpl.rc_file("my_matplotlib_rcparams")
 
 
 def main(args):
+    torch.set_float32_matmul_precision('high')  # enable TensorFloat32 tensor cores
 
     ddp = int(os.environ.get('RANK', -1)) != -1 # is this a ddp run?
     if ddp:
@@ -57,7 +58,8 @@ def main(args):
     torch.manual_seed(37 + seed_offset)
 
     cfg = open_config(args.config)
-    device = cfg["device"]
+    if not ddp:
+        device = cfg["device"]
 
     # Model
     model = get_model_from_config(cfg)  # get_model(sumO=cfg["sumO"], device=device)
@@ -81,7 +83,8 @@ def main(args):
         print("Validation set size:", len(val_dataset))
 
     # Training parameters
-    dl_num_workers = cfg["dataloader_num_workers"]
+    dl_num_workers = cfg["dl_num_workers"]
+    dl_prefectch_factor = cfg["dl_prefectch_factor"]
     bs = cfg["bs"]
     lr = cfg["lr"]
     wd = cfg["wd"]
@@ -89,14 +92,15 @@ def main(args):
     loss_func = nn.CrossEntropyLoss(weight=torch.Tensor([1, 1, 1, 1, 1]).to(device))
 
     opt = optim.AdamW(model.parameters(), lr=lr, weight_decay=wd)
-    train_dl, val_dl = get_data(train_dataset, val_dataset, bs, dl_num_workers)
+    train_dl, val_dl = get_data(train_dataset, val_dataset, bs, dl_num_workers, dl_prefectch_factor, ddp)
+    steps_per_epoch = ceil(len(train_dl) / ddp_world_size)  # TODO: this does not give the exact steps per epoch
 
     if cfg["lr_schedule"] == "constant":
         lr_scheduler = None
     elif cfg["lr_schedule"] == "onecycle":
-        lr_scheduler = OneCycleLR(opt, max_lr=lr, steps_per_epoch=len(train_dl), epochs=epochs)
+        lr_scheduler = OneCycleLR(opt, max_lr=lr, steps_per_epoch=steps_per_epoch, epochs=epochs)
     elif cfg["lr_schedule"] == "cosinedecay":
-        lr_scheduler = CosineAnnealingLR(opt, T_max=len(train_dl) * epochs)
+        lr_scheduler = CosineAnnealingLR(opt, T_max=steps_per_epoch * epochs)
     else:
         raise ValueError("Supported values for lr_schedule are 'constant', 'onecycle' and 'cosinedecay'.")
 
@@ -121,6 +125,8 @@ def main(args):
             print("compiling the model... (takes a ~minute)")
         unoptimized_model = model
         model = torch.compile(model) # requires PyTorch 2.0
+    elif master_process:
+        print("skipping model compilation")
 
     # wrap model in DDP container
     if ddp:
@@ -139,7 +145,7 @@ def main(args):
         lr_scheduler,
         device,
         checkpoint_saver,
-        master_process,
+        ddp_rank,
     )
 
     # Evaluate

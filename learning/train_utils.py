@@ -5,20 +5,29 @@ import time
 import datetime
 import matplotlib.pyplot as plt
 import pandas as pd
+from math import ceil
 
 from torch.utils.data import DataLoader
+from torch.utils.data.distributed import DistributedSampler
+from torch.distributed import get_world_size
 
-
-def get_data(train_ds, val_ds, bs, num_workers=0):
+def get_data(train_ds, val_ds, bs, num_workers=0, prefetch_factor=None, ddp=False):
     return (
         DataLoader(
             train_ds,
             batch_size=bs,
-            shuffle=True,
+            shuffle=False,
             num_workers=num_workers,
-            pin_memory=True,
+            # pin_memory=True,
+            prefetch_factor=prefetch_factor,
         ),
-        DataLoader(val_ds, batch_size=bs * 2, num_workers=num_workers, pin_memory=True),
+        DataLoader(
+            val_ds,
+            batch_size=bs,
+            num_workers=num_workers,
+            # pin_memory=True,
+            prefetch_factor=prefetch_factor,
+        ),
     )
 
 
@@ -43,7 +52,7 @@ def fit(
     lr_scheduler=None,
     device="cuda",
     checkpoint_saver=None,
-    master_process=True,
+    ddp_rank=0,
 ):
     since = time.time()
     epochs_train_loss = []
@@ -53,20 +62,22 @@ def fit(
         running_train_loss = 0.0
         epoch_start = time.perf_counter()
         model.train()
-        train_bar = tqdm(train_dl, total=len(train_dl), desc="Epoch {:d}/{:d}".format(epoch, epochs))
-        for xb, yb in train_bar:
-            xb = xb.to(device)
-            yb = yb.to(device)
-            batch_loss, lenxb = loss_batch(model, loss_func, xb, yb, opt)
+        train_bar = tqdm(train_dl, desc="Epoch {:d}/{:d}".format(epoch, epochs))
+        for i, (xb, yb) in enumerate(train_bar):
+            # pin x,y, allows for copying to GPU asynchronously (non_blocking=True)
+            xb = xb.pin_memory().to(device, non_blocking=True)
+            yb = yb.pin_memory().to(device, non_blocking=True)
+            batch_loss, lenxb = loss_batch(model, loss_func, xb, yb, opt)  # ddp synchronization point (forward pass & differentiation)
             running_train_loss += np.multiply(batch_loss, lenxb)
-            train_bar.set_postfix_str(s="batch_loss: {:.4f}".format(batch_loss))
-            train_bar.set_description_str(desc="Epoch {:d}/{:d}".format(epoch, epochs))
+            if i % 10 == 0:
+                train_bar.set_postfix_str(s="batch_loss: {:.4f}".format(batch_loss))
+                train_bar.set_description_str(desc="Epoch {:d}/{:d}".format(epoch, epochs))
             if lr_scheduler is not None:
                 lr_scheduler.step()
         train_bar.close()
 
         model.eval()
-        val_bar = tqdm(val_dl, total=len(val_dl), desc="Validation")
+        val_bar = tqdm(val_dl, desc="Validation")
         with torch.no_grad():
             losses, nums = zip(*[loss_batch(model, loss_func, xb.to(device), yb.to(device)) for xb, yb in val_bar])
         train_loss = running_train_loss / len(train_dl.dataset)
@@ -76,7 +87,7 @@ def fit(
         current_time = time.perf_counter()
         dt = current_time - epoch_start
         epoch_times.append(dt)
-        if master_process:
+        if ddp_rank == 0:
             val_bar.write(
                 "Epoch: {:d} | Train Loss: {:.3f} | Val Loss: {:.3f} | Time: {}".format(
                     epoch, train_loss, val_loss, str(datetime.timedelta(seconds=round(dt)))
@@ -89,7 +100,7 @@ def fit(
 
     time_elapsed = time.time() - since
 
-    if master_process:
+    if ddp_rank == 0:
         print("\nTraining complete in {:.0f}m {:.0f}s".format(time_elapsed // 60, time_elapsed % 60))
     return pd.DataFrame(
         {

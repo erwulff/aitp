@@ -3,8 +3,10 @@ import numpy as np
 from pathlib import Path
 import h5py
 from math import floor, ceil
+from tqdm import tqdm
 
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, IterableDataset, DistributedSampler
+from torch.distributed import get_rank, get_world_size
 
 
 class MetaJediDataset(Dataset):
@@ -21,6 +23,78 @@ class MetaJediDataset(Dataset):
     def __len__(self):
         return self.size
 
+
+class JEDIIterableDataset(IterableDataset):
+    """
+    This dataset is based on the torch.utils.data.IterableDataset class and is
+    suitable for distributed training and/or multi-process data loading.
+    """
+    CLASS_LABELS = ["gluon", "light quark", "W", "Z", "top"]
+    FILE_SIZE = 10000
+    def __init__(self, data_dir, train, size=None, transform=None):
+        self.size = size
+        self.transform = transform
+
+        if train:
+            self.split_dir = Path(data_dir) / "train"
+            max_size = len(list(self.split_dir.glob("*JEDI*"))) * self.FILE_SIZE
+            if self.size == None:
+                self.size = 630000
+            else:
+                assert self.size <= max_size, "max_size is {}, self.size is {}".format(max_size, self.size)
+        else:
+            self.split_dir = Path(data_dir) / "val"
+            max_size = len(list(self.split_dir.glob("*JEDI*"))) * self.FILE_SIZE
+            if self.size == None:
+                self.size = 260000
+            else:
+                assert self.size <= max_size, "max_size is {}, self.size is {}".format(max_size, self.size)
+
+        self.shards = list(self.split_dir.glob("*JEDI*"))  # shard filenames
+        # self.shards = list(Path("/mnt/ceph/users/ewulff/data/clic_pt").glob("samples*.pt"))  # shard filenames
+
+
+    def _convert_to_pt(self, save_dir):
+        for i_shard, shard in enumerate(tqdm(self.shards, total=len(self.shards))):
+            samples = []
+            with h5py.File(str(shard), mode="r") as loaded_shard:
+                for i_sample in range(len(loaded_shard['X'])):
+                    sample = torch.tensor(loaded_shard['X'][i_sample]), torch.tensor(loaded_shard['Y'][i_sample])
+                    samples.append(sample)
+            torch.save(samples, Path(save_dir) / f"samples{i_shard}.pt")
+
+
+    def __iter__(self):
+        worker_info = torch.utils.data.get_worker_info()
+
+        num_workers = worker_info.num_workers if worker_info is not None else 1  # cpus feeding data to gpu
+        worker_id = worker_info.id if worker_info is not None else 0  # cpu worker id
+        world_size = get_world_size()  # number of gpus
+        process_rank = get_rank()  # gpu worker rank
+
+        sampler_rank = process_rank * num_workers + worker_id
+        # sampler distributes shard indices over gpu and cpu workers
+        sampler = DistributedSampler(self.shards,
+            num_replicas=(num_workers * world_size),
+            rank=sampler_rank,
+            shuffle=False,
+        )
+        print(f"sampler of sampler_rank {sampler_rank} is of length {len(sampler)}")
+
+        for i_shard in iter(sampler):
+            shard = self.shards[i_shard]
+            with h5py.File(str(shard), mode="r") as loaded_shard:
+                for i_sample in range(len(loaded_shard['X'])):
+                    sample = torch.tensor(loaded_shard['X'][i_sample]), torch.tensor(loaded_shard['Y'][i_sample])
+                    if self.transform:
+                        sample = self.transform(sample)
+                    yield sample
+            # samples = torch.load(shard)
+            # for i_sample in range(len(samples)):
+            #     yield samples[i_sample]
+
+    def __len__(self):
+        return self.size
 
 class JEDIRAMDataset(MetaJediDataset):
     """

@@ -9,5 +9,5 @@ for i_gpu in range(num_gpus):
 print("Checking PyTorch CUDA devices...")
 print("torch.cuda.is_available():", torch.cuda.is_available())
 print(f"Found {num_gpus} GPUs")
-print("Device names: ", names)
+print("Device names:", names)
 print("PyTorch CUDA check complete")
